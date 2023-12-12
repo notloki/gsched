@@ -1,3 +1,11 @@
+# My Stuff
+test.py
+link.py
+cleanup.py
+gui.py
+#todo list
+*.todo
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

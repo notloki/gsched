@@ -1,30 +1,34 @@
-# 1- call myjobtogo.com
-# 2- Get Schedule
-# 3- Convert Schedule to Dictionary.
-# 4- call google and fetch copy of schedule. ifi item doesn't exist, setnwe
-
-
-
-import ref
-from requests import HTTPError
-from tzlocal import get_localzone_name
-from to_go import getToGo
-from dateparser import parse
-from datetime import datetime, timedelta
+from beautiful_date import *
 from gcsa.google_calendar import GoogleCalendar
 from gcsa.event import Event
+from sys import argv
+from requests import HTTPError
+from tzlocal import get_localzone_name
+from dateparser import parse
+from datetime import datetime, time
 import logging 
+import to_go
+import ref
 
-OFFLINE = False
-
-    
-
-
-
-
-def event_exists(gc, new_event):
-    if not OFFLINE:     
-        events = gc.get_events()
+def logging_setup():
+    log = logging.getLogger('schedule_log')
+    if len(argv > 1):
+        match argv:
+            case 'warning':
+                log.setLevel(logging.WARNING)
+            case 'info':
+                log.setLevel(logging.INFO)
+            case 'debug':
+                log.setLevel(logging.DEBUG)
+            case _:
+                log.error("wrong argument\n details %s", exc_info=1)
+                raise
+    log.setLevel(logging.INFO)
+    return log
+                
+def event_exists(gc, new_event) -> bool:
+         
+    events = gc.get_events()
     for existing_event in events:
         # Compare event properties (e.g., summary, start, end)
         if (
@@ -40,34 +44,32 @@ def get_schedule_data(weeks):
     curr_day = None
     dt = datetime.now()
 
+    is1st = True
     for week in weeks:
         for day in week.splitlines():
-            if day.endswith('day'):
-                curr_day = day
-            elif len(day.split()) == 6:
+            if len(day.split()) == 6:
+                
                 in_time = parse('{}{}{} {}{}'.format(day.split()[0], '\/', dt.year, day.split()[1], day.split()[2]))
                 out_time = parse('{}{}{} {}{}'.format(day.split()[0], '\/', dt.year, day.split()[3], day.split()[4]))
-                if out_time < in_time:
-                    out_time += timedelta(days=1)
+                if time(hour=out_time.hour,minute=out_time.minute) == time(0,0):
+                    
+                    out_time = out_time - 1 * minutes
+                    out_time = out_time + 1 * days
+                    #out_time += timedelta(hours)
+                    # out_time = 
                 schedule_data.append({'in_time': in_time, 'out_time': out_time, 'dow': curr_day})
-                curr_day = None
+                   
     return schedule_data
 
 def main():
     
-    log = logging.getLogger(name='schedule_log')
-
-    ID = ref.TO_GO_ID
-    USERNAME = ref.TO_GO_USERNAME
-    PASSWORD = ref.TO_GO_PASSWORD
+    log = logging_setup()
     
-    weeks = getToGo(USERNAME, PASSWORD)
+    ID = ref.TO_GO_ID    
+    weeks = to_go.main()
     log.info('weeks is asigned')
     log.debug(weeks)
     
-
-
-
     schedule_data = get_schedule_data(weeks)
     log.debug('schedule_data: {}'.format(schedule_data))
     gc = GoogleCalendar(ID)
@@ -80,17 +82,14 @@ def main():
                 log.debug('does not exist in calendar')
                 log.debug('adding :{}'.format(event))
                 event = gc.add_event(event)
-                print(event)
+                print(f'event added:{event}')
             else:
                 log.debug('item already exists')
         except HTTPError as e:
             print(f"Error adding event: {e}")
-
     events = gc.get_events()
     for event in events:
         print(event)
 
 if __name__ == "__main__":
     main()
-
-    
