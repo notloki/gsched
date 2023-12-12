@@ -12,7 +12,7 @@ import ref
 
 def logging_setup():
     log = logging.getLogger('schedule_log')
-    if len(argv > 1):
+    if len(argv) > 1:
         match argv:
             case 'warning':
                 log.setLevel(logging.WARNING)
@@ -71,12 +71,12 @@ def main():
     log.debug(weeks)
     
     schedule_data = get_schedule_data(weeks)
-    log.debug('schedule_data: {}'.format(schedule_data))
+    log.debug(f'schedule_data: {schedule_data}')
     gc = GoogleCalendar(ID)
 
     for data in schedule_data:
         event = Event(summary='work', start=data.get('in_time'), end=data.get('out_time'), timezone=get_localzone_name())
-        log.debug('event: {}'.format(event))
+        log.debug(f'event: {event}')
         try:
             if not event_exists(gc, event):
                 log.debug('does not exist in calendar')
